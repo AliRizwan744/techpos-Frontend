@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { formatMoney, calcChange } from "../../utils/money";
 
 export default function CheckoutModal({ total, onConfirm, onClose }) {
@@ -9,9 +9,33 @@ export default function CheckoutModal({ total, onConfirm, onClose }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const amountRef = useRef(null);
+  const cashRef = useRef(null);
+  const cardRef = useRef(null);
+  const confirmRef = useRef(null);
+
   const change = calcChange(Number(amountPaid), total);
   const splitTotal = Number(cashAmount || 0) + Number(cardAmount || 0);
   const splitRemaining = total - splitTotal;
+
+  // ✅ Auto-focus amount input jab modal khule ya method change ho
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (paymentMethod === "cash") amountRef.current?.focus();
+      else if (paymentMethod === "split") cashRef.current?.focus();
+      else confirmRef.current?.focus();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [paymentMethod]);
+
+  // ✅ Escape se close
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
 
   const handleConfirm = async () => {
     setError("");
@@ -30,26 +54,50 @@ export default function CheckoutModal({ total, onConfirm, onClose }) {
         amountPaid: paymentMethod === "cash" ? Number(amountPaid) : total,
       });
     } catch (err) {
+      console.log(err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ Enter key handler for inputs
+  const handleInputKeyDown = (e, nextRef) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (nextRef) nextRef.current?.focus();
+      else handleConfirm();
+    }
+  };
+
+  // ✅ Method shortcut keys: 1=Cash, 2=Card, 3=Online, 4=Split
+  useEffect(() => {
+    const handler = (e) => {
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      if (tag === "input") return; // typing ho to skip
+      if (e.key === "1") setPaymentMethod("cash");
+      if (e.key === "2") setPaymentMethod("card");
+      if (e.key === "3") setPaymentMethod("online");
+      if (e.key === "4") setPaymentMethod("split");
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   const methods = [
-    { value: "cash", label: "💵 Cash", color: "#22c55e" },
-    { value: "card", label: "💳 Card", color: "#60a5fa" },
-    { value: "online", label: "📱 Online", color: "#a78bfa" },
-    { value: "split", label: "⚡ Split", color: "#f59e0b" },
+    { value: "cash", label: "💵 Cash", color: "#22c55e", key: "1" },
+    { value: "card", label: "💳 Card", color: "#60a5fa", key: "2" },
+    { value: "online", label: "📱 Online", color: "#a78bfa", key: "3" },
+    { value: "split", label: "⚡ Split", color: "#f59e0b", key: "4" },
   ];
 
   return (
-    <div style={styles.overlay}>
+    <div style={styles.overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={styles.modal}>
         {/* Header */}
         <div style={styles.header}>
           <h2 style={styles.title}>Checkout</h2>
-          <button onClick={onClose} style={styles.xBtn}>✕</button>
+          <button onClick={onClose} style={styles.xBtn} tabIndex={-1}>✕</button>
         </div>
 
         {/* Total */}
@@ -63,6 +111,7 @@ export default function CheckoutModal({ total, onConfirm, onClose }) {
           {methods.map((m) => (
             <button
               key={m.value}
+              tabIndex={-1}
               onClick={() => setPaymentMethod(m.value)}
               style={{
                 ...styles.methodTab,
@@ -72,8 +121,14 @@ export default function CheckoutModal({ total, onConfirm, onClose }) {
               }}
             >
               {m.label}
+              <span style={styles.methodKey}>{m.key}</span>
             </button>
           ))}
+        </div>
+
+        {/* ✅ Keyboard hint */}
+        <div style={styles.methodHint}>
+          Press <strong>1</strong> Cash &nbsp;·&nbsp; <strong>2</strong> Card &nbsp;·&nbsp; <strong>3</strong> Online &nbsp;·&nbsp; <strong>4</strong> Split
         </div>
 
         {/* Cash */}
@@ -81,9 +136,13 @@ export default function CheckoutModal({ total, onConfirm, onClose }) {
           <div style={styles.field}>
             <label style={styles.label}>Amount Received (Rs)</label>
             <input
-              type="number" placeholder="Enter amount..."
-              value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)}
-              style={styles.input} autoFocus
+              ref={amountRef}
+              type="number"
+              placeholder="Enter amount..."
+              value={amountPaid}
+              onChange={(e) => setAmountPaid(e.target.value === "" ? "" : Number(e.target.value))}
+              onKeyDown={(e) => handleInputKeyDown(e, null)}
+              style={styles.input}
             />
           </div>
         )}
@@ -94,6 +153,7 @@ export default function CheckoutModal({ total, onConfirm, onClose }) {
             <p style={styles.infoText}>
               {paymentMethod === "card" ? "💳 Card payment of" : "📱 Online transfer of"} <strong>{formatMoney(total)}</strong> will be recorded.
             </p>
+            <p style={{ ...styles.infoText, fontSize: 11, marginTop: 6 }}>Press Enter to confirm</p>
           </div>
         )}
 
@@ -103,16 +163,24 @@ export default function CheckoutModal({ total, onConfirm, onClose }) {
             <div style={styles.field}>
               <label style={styles.label}>💵 Cash Amount (Rs)</label>
               <input
-                type="number" placeholder="Cash portion..."
-                value={cashAmount} onChange={(e) => setCashAmount(e.target.value)}
+                ref={cashRef}
+                type="number"
+                placeholder="Cash portion..."
+                value={cashAmount}
+                onChange={(e) => setCashAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                onKeyDown={(e) => handleInputKeyDown(e, cardRef)}
                 style={styles.input}
               />
             </div>
             <div style={styles.field}>
               <label style={styles.label}>💳 Card Amount (Rs)</label>
               <input
-                type="number" placeholder="Card portion..."
-                value={cardAmount} onChange={(e) => setCardAmount(e.target.value)}
+                ref={cardRef}
+                type="number"
+                placeholder="Card portion..."
+                value={cardAmount}
+                onChange={(e) => setCardAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                onKeyDown={(e) => handleInputKeyDown(e, null)}
                 style={styles.input}
               />
             </div>
@@ -138,9 +206,14 @@ export default function CheckoutModal({ total, onConfirm, onClose }) {
         {error && <p style={styles.error}>⚠️ {error}</p>}
 
         <div style={styles.btnRow}>
-          <button onClick={onClose} style={styles.cancelBtn}>Cancel</button>
-          <button onClick={handleConfirm} disabled={loading} style={styles.confirmBtn}>
-            {loading ? "Processing..." : "✅ Confirm Sale"}
+          <button tabIndex={-1} onClick={onClose} style={styles.cancelBtn}>Cancel (Esc)</button>
+          <button
+            ref={confirmRef}
+            onClick={handleConfirm}
+            disabled={loading}
+            style={styles.confirmBtn}
+          >
+            {loading ? "Processing..." : "✅ Confirm Sale (Enter)"}
           </button>
         </div>
       </div>
@@ -164,7 +237,9 @@ const styles = {
   totalLabel: { fontSize: 13, color: "#4a5568" },
   totalAmount: { fontSize: 26, fontWeight: "800", color: "#00f5ff", fontFamily: "monospace", textShadow: "0 0 20px rgba(0,245,255,0.4)" },
   methodTabs: { display: "flex", gap: 8 },
-  methodTab: { flex: 1, padding: "10px 4px", borderRadius: 10, border: "1px solid", cursor: "pointer", fontSize: 12, fontWeight: "700", transition: "all 0.2s" },
+  methodTab: { flex: 1, padding: "10px 4px", borderRadius: 10, border: "1px solid", cursor: "pointer", fontSize: 12, fontWeight: "700", transition: "all 0.2s", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 },
+  methodKey: { fontSize: 9, fontFamily: "monospace", opacity: 0.5 },
+  methodHint: { fontSize: 10, color: "#1e293b", textAlign: "center", fontFamily: "monospace" },
   field: { display: "flex", flexDirection: "column", gap: 6 },
   label: { fontSize: 12, color: "#4a5568", fontWeight: "600" },
   input: { padding: "11px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#f1f5f9", fontSize: 15, outline: "none" },
@@ -176,6 +251,6 @@ const styles = {
   changeAmount: { fontSize: 20, fontWeight: "bold", color: "#22c55e" },
   error: { color: "#f87171", fontSize: 13, backgroundColor: "rgba(239,68,68,0.1)", padding: "10px 14px", borderRadius: 8, margin: 0 },
   btnRow: { display: "flex", gap: 10 },
-  cancelBtn: { flex: 1, padding: "12px 0", background: "rgba(255,255,255,0.05)", color: "#4a5568", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, cursor: "pointer", fontSize: 14 },
+  cancelBtn: { flex: 1, padding: "12px 0", background: "rgba(255,255,255,0.05)", color: "#4a5568", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, cursor: "pointer", fontSize: 13 },
   confirmBtn: { flex: 2, padding: "12px 0", background: "linear-gradient(135deg, #22c55e, #16a34a)", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontSize: 14, fontWeight: "bold", boxShadow: "0 4px 16px rgba(34,197,94,0.3)" },
-};  
+};

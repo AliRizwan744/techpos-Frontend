@@ -30,9 +30,13 @@ export default function StoreSettings() {
     fetchStore();
   }, []);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+ const handleChange = (e) => {
+  const { name, value, type } = e.target;
+  setForm({
+    ...form,
+    [name]: type === "number" ? (value === "" ? "" : Number(value)) : value,
+  });
+};
 
   const handleSave = async () => {
     try {

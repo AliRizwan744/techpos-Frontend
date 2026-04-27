@@ -1,11 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate,useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/Authcontext";
 import { useAuth } from "./context/Authcontext";
 import ProtectedRoute from "./components/common/ProtectedRoutes";
 import Sidebar from "./components/layout/Sidebar";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
-import POS from "./pages/POS";
+import POS from "./pages/pos";
 import Receipt from "./pages/Receipt";
 import SalesHistory from "./pages/SalesHistory";
 import SaleDetails from "./pages/SalesDetail";
@@ -22,47 +22,40 @@ function LoginRoute() {
   return <Login />;
 }
 
-function AppLayout({ children }) {
+function AppLayout({ children, isPOS }) {
   const { user, loading } = useAuth();
 
   if (loading) return (
-    <div style={{
-      minHeight: "100vh", display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center",
-      background: "#0f172a", gap: 16,
-    }}>
-      <div style={{
-        width: 48, height: 48,
-        border: "3px solid rgba(0,245,255,0.2)",
-        borderTop: "3px solid #00f5ff",
-        borderRadius: "50%",
-        animation: "spin 0.8s linear infinite",
-      }} />
-      <p style={{ color: "#00f5ff", fontFamily: "monospace", letterSpacing: 3, fontSize: 13 }}>
-        LOADING...
-      </p>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a" }}>
+      <div style={{ width: 48, height: 48, border: "3px solid rgba(0,245,255,0.2)", borderTop: "3px solid #00f5ff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 
   return (
-    <div style={{ display: "flex" }}>
+    <div style={{ display: "flex", minHeight: "100vh" }}>
       {user && <Sidebar />}
       <div style={{
         marginLeft: user ? 220 : 0,
-        flex: 1, minHeight: "100vh",
+        flex: 1,
+        minHeight: "100vh",
         background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
-        padding: user ? "20px 24px" : "0",
+        // ✅ POS page pe padding 0, baqi pages pe normal
+        padding: isPOS ? 0 : "20px 24px",
+        display: "flex",
+        flexDirection: "column",
       }}>
         {children}
       </div>
     </div>
   );
 }
-
 function AppRoutes() {
+  const location = useLocation();
+  const isPOS = location.pathname === "/pos";
+
   return (
-    <AppLayout>
+    <AppLayout isPOS={isPOS}>
       <Routes>
         <Route path="/login" element={<LoginRoute />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

@@ -3,7 +3,7 @@ import http from "../../api/http";
 import Loading from "../common/Loading";
 import ErrorBox from "../common/ErrorBox";
 
-export default function ProductList({ onAdd, animatingId }) {
+export default function ProductList({ onAdd, animatingId, cartItems = [] }) {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState("");
@@ -45,7 +45,7 @@ export default function ProductList({ onAdd, animatingId }) {
     <div style={styles.wrapper}>
       {/* Header */}
       <div style={styles.headerRow}>
-        <h2 style={styles.heading}>🛒 Products</h2>
+        <h2 style={styles.heading}>Products</h2>
         <span style={styles.count}>{products.length} items</span>
       </div>
 
@@ -59,15 +59,9 @@ export default function ProductList({ onAdd, animatingId }) {
             onChange={(e) => setSearch(e.target.value)}
             style={styles.searchInput}
           />
-          {search && (
-            <button onClick={() => setSearch("")} style={styles.clearBtn}>✕</button>
-          )}
+          {search && <button onClick={() => setSearch("")} style={styles.clearBtn}>✕</button>}
         </div>
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          style={styles.select}
-        >
+        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={styles.select}>
           <option value="">All Categories</option>
           {categories.map((cat) => (
             <option key={cat._id} value={cat._id}>{cat.name}</option>
@@ -78,83 +72,86 @@ export default function ProductList({ onAdd, animatingId }) {
       {loading && <Loading message="Loading products..." />}
       <ErrorBox message={error} onRetry={() => setSearch("")} />
 
-      {/* Product Cards */}
+      {/* Grid */}
       {!loading && (
-        <div style={styles.grid}>
-          {products.length === 0 && (
-            <div style={styles.emptyBox}>
-              <p style={styles.emptyIcon}>📦</p>
-              <p style={styles.empty}>No products found</p>
-            </div>
-          )}
-          {products.map((product) => {
-            const outOfStock = product.type === "product" && Number(product.stockQty) === 0;
-            const lowStock = product.type === "product" && Number(product.stockQty) > 0 && Number(product.stockQty) <= 5;
-            const isAnimating = animatingId === product._id;
-            const isHovered = hoveredId === product._id;
+        <div style={styles.scrollArea}>
+          <div style={styles.grid}>
+            {products.length === 0 && (
+              <div style={styles.emptyBox}>
+                <p style={styles.emptyIcon}>📦</p>
+                <p style={styles.empty}>No products found</p>
+              </div>
+            )}
+            {products.map((product) => {
+              const inCart = cartItems.find((i) => i._id === product._id);
+              const cartQty = inCart ? inCart.qty : 0;
+              const remaining = product.type === "product" ? Number(product.stockQty) - cartQty : Infinity;
+              const outOfStock = product.type === "product" && Number(product.stockQty) === 0;
+              const cartFull = product.type === "product" && remaining <= 0;
+              const lowStock = product.type === "product" && Number(product.stockQty) > 0 && Number(product.stockQty) <= 5;
+              const isAnimating = animatingId === product._id;
+              const isHovered = hoveredId === product._id;
 
-            return (
-              <div
-                key={product._id}
-                className={isAnimating ? "add-animate" : ""}
-                onMouseEnter={() => setHoveredId(product._id)}
-                onMouseLeave={() => setHoveredId(null)}
-                style={{
-                  ...styles.card,
-                  borderColor: isHovered && !outOfStock ? "rgba(25,118,210,0.5)" : "rgba(255,255,255,0.08)",
-                  boxShadow: isHovered && !outOfStock ? "0 8px 24px rgba(25,118,210,0.2)" : "0 2px 8px rgba(0,0,0,0.2)",
-                  transform: isHovered && !outOfStock ? "translateY(-2px)" : "translateY(0)",
-                  opacity: outOfStock ? 0.5 : 1,
-                }}
-              >
-                {/* Low stock badge */}
-                {lowStock && (
-                  <div style={styles.lowStockBadge}>⚠️ Low</div>
-                )}
-
-                <p style={styles.productName}>{product.name}</p>
-                <p style={styles.category}>{product.categoryId?.name || "—"}</p>
-                <p style={styles.price}>Rs {product.price?.toLocaleString()}</p>
-
-                {product.type === "product" && (
-                  <p style={{ ...styles.stock, color: lowStock ? "#f59e0b" : outOfStock ? "#ef4444" : "#22c55e" }}>
-                    {outOfStock ? "Out of Stock" : `Stock: ${product.stockQty}`}
-                  </p>
-                )}
-                {product.type === "service" && (
-                  <p style={{ ...styles.stock, color: "#818cf8" }}>Service</p>
-                )}
-
-                {/* ✅ Quick qty buttons 1-3 */}
-                {!outOfStock && (
-                  <div style={styles.qtyRow}>
-                    {[1, 2, 3].map((q) => (
-                      <button
-                        key={q}
-                        onClick={() => { for (let i = 0; i < q; i++) onAdd(product); }}
-                        style={styles.qtyQuickBtn}
-                        title={`Add ${q}`}
-                      >
-                        +{q}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <button
-                  onClick={() => onAdd(product)}
-                  disabled={outOfStock}
+              return (
+                <div
+                  key={product._id}
+                  className={isAnimating ? "add-animate" : ""}
+                  onMouseEnter={() => setHoveredId(product._id)}
+                  onMouseLeave={() => setHoveredId(null)}
                   style={{
-                    ...styles.addBtn,
-                    background: outOfStock ? "#374151" : isHovered ? "linear-gradient(135deg, #1976d2, #0d47a1)" : "rgba(25,118,210,0.8)",
-                    cursor: outOfStock ? "not-allowed" : "pointer",
+                    ...styles.card,
+                    borderColor: cartFull ? "rgba(239,68,68,0.4)" : isHovered && !outOfStock ? "rgba(59,130,246,0.5)" : "rgba(255,255,255,0.06)",
+                    boxShadow: isHovered && !outOfStock ? "0 8px 24px rgba(59,130,246,0.15)" : "0 2px 8px rgba(0,0,0,0.2)",
+                    transform: isHovered && !outOfStock ? "translateY(-2px)" : "translateY(0)",
+                    opacity: outOfStock ? 0.45 : 1,
                   }}
                 >
-                  {outOfStock ? "Out of Stock" : "+ Add to Cart"}
-                </button>
-              </div>
-            );
-          })}
+                  {lowStock && <div style={styles.lowStockBadge}>⚠️ Low</div>}
+                  {cartQty > 0 && <div style={styles.cartQtyBadge}>🛒 {cartQty}</div>}
+
+                  <p style={styles.productName}>{product.name}</p>
+                  <p style={styles.category}>{product.categoryId?.name || "—"}</p>
+                  <p style={styles.price}>Rs {product.price?.toLocaleString()}</p>
+
+                  {product.type === "product" && (
+                    <p style={{ ...styles.stock, color: cartFull ? "#ef4444" : lowStock ? "#f59e0b" : "#22c55e" }}>
+                      {outOfStock ? "Out of Stock" : cartFull ? "✋ Max" : `${remaining} left`}
+                    </p>
+                  )}
+                  {product.type === "service" && (
+                    <p style={{ ...styles.stock, color: "#818cf8" }}>Service</p>
+                  )}
+
+                  {/* ✅ Quick qty — loop nahi, qty direct pass */}
+                  {!outOfStock && !cartFull && (
+                    <div style={styles.qtyRow}>
+                      {[1, 2, 3].filter((q) => q <= remaining).map((q) => (
+                        <button
+                          key={q}
+                          onClick={(e) => { e.stopPropagation(); onAdd(product, q); }}
+                          style={styles.qtyQuickBtn}
+                        >
+                          +{q}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onAdd(product); }}
+                    disabled={outOfStock || cartFull}
+                    style={{
+                      ...styles.addBtn,
+                      background: outOfStock || cartFull ? "rgba(55,65,81,0.8)" : isHovered ? "linear-gradient(135deg, #1d4ed8, #2563eb)" : "rgba(37,99,235,0.7)",
+                      cursor: outOfStock || cartFull ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {outOfStock ? "Out of Stock" : cartFull ? "Max Reached" : "+ Add"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
@@ -162,63 +159,37 @@ export default function ProductList({ onAdd, animatingId }) {
 }
 
 const styles = {
-  wrapper: { flex: 1, overflowY: "auto", padding: "4px 8px" },
-  headerRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
-  heading: { fontSize: 18, fontWeight: "bold", color: "#f1f5f9", margin: 0 },
-  count: { fontSize: 12, color: "#4a5568", backgroundColor: "rgba(255,255,255,0.05)", padding: "3px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" },
-  filterRow: { display: "flex", gap: 10, marginBottom: 14 },
+  wrapper: {
+    display: "flex", flexDirection: "column",
+    flex: 1, overflow: "hidden", padding: "0 8px 8px",
+  },
+  headerRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexShrink: 0 },
+  heading: { fontSize: 16, fontWeight: "800", color: "#f1f5f9", margin: 0 },
+  count: { fontSize: 11, color: "#334155", backgroundColor: "rgba(255,255,255,0.04)", padding: "2px 9px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)" },
+  filterRow: { display: "flex", gap: 8, marginBottom: 10, flexShrink: 0 },
   searchWrapper: { flex: 1, position: "relative", display: "flex", alignItems: "center" },
-  searchIcon: { position: "absolute", left: 10, fontSize: 14, pointerEvents: "none" },
-  searchInput: {
-    width: "100%", padding: "9px 36px 9px 32px", borderRadius: 10,
-    border: "1px solid rgba(255,255,255,0.1)",
-    background: "rgba(255,255,255,0.05)", color: "#f1f5f9",
-    fontSize: 14, outline: "none", boxSizing: "border-box",
-    transition: "border-color 0.2s",
-  },
-  clearBtn: { position: "absolute", right: 8, background: "none", border: "none", color: "#4a5568", cursor: "pointer", fontSize: 14 },
-  select: {
-    padding: "9px 12px", borderRadius: 10,
-    border: "1px solid rgba(255,255,255,0.1)",
-    background: "rgba(255,255,255,0.05)", color: "#94a3b8", fontSize: 13,
-    outline: "none",
-  },
-  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 },
+  searchIcon: { position: "absolute", left: 9, fontSize: 13, pointerEvents: "none" },
+  searchInput: { width: "100%", padding: "8px 32px 8px 30px", borderRadius: 9, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#f1f5f9", fontSize: 13, outline: "none", boxSizing: "border-box" },
+  clearBtn: { position: "absolute", right: 7, background: "none", border: "none", color: "#334155", cursor: "pointer", fontSize: 13 },
+  select: { padding: "8px 10px", borderRadius: 9, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#64748b", fontSize: 12, outline: "none" },
+  scrollArea: { flex: 1, overflowY: "auto" },
+  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10 },
   emptyBox: { gridColumn: "1/-1", textAlign: "center", padding: 40 },
-  emptyIcon: { fontSize: 40, marginBottom: 8 },
-  empty: { color: "#4a5568", fontSize: 14 },
+  emptyIcon: { fontSize: 36, marginBottom: 8 },
+  empty: { color: "#334155", fontSize: 13 },
   card: {
-    background: "rgba(255,255,255,0.04)",
-    backdropFilter: "blur(12px)",
-    border: "1px solid",
-    borderRadius: 14, padding: 14,
-    display: "flex", flexDirection: "column", gap: 4,
-    transition: "all 0.2s ease",
-    position: "relative", overflow: "hidden",
+    background: "rgba(255,255,255,0.03)", backdropFilter: "blur(12px)",
+    border: "1px solid", borderRadius: 12, padding: 12,
+    display: "flex", flexDirection: "column", gap: 3,
+    transition: "all 0.2s ease", position: "relative", overflow: "hidden",
   },
-  lowStockBadge: {
-    position: "absolute", top: 8, right: 8,
-    fontSize: 9, fontWeight: "700",
-    backgroundColor: "rgba(245,158,11,0.2)",
-    color: "#f59e0b", padding: "2px 6px",
-    borderRadius: 6, border: "1px solid rgba(245,158,11,0.3)",
-  },
-  productName: { fontWeight: "bold", fontSize: 14, color: "#f1f5f9", marginTop: 4 },
-  category: { fontSize: 11, color: "#4a5568" },
-  price: { fontSize: 16, color: "#60a5fa", fontWeight: "bold", margin: "4px 0" },
-  stock: { fontSize: 11, fontWeight: "600" },
-  qtyRow: { display: "flex", gap: 4, marginTop: 6 },
-  qtyQuickBtn: {
-    flex: 1, padding: "4px 0",
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 6, color: "#94a3b8",
-    fontSize: 11, fontWeight: "700", cursor: "pointer",
-  },
-  addBtn: {
-    marginTop: 6, padding: "8px 0",
-    color: "#fff", border: "none", borderRadius: 8,
-    fontSize: 13, fontWeight: "bold",
-    transition: "all 0.2s",
-  },
+  lowStockBadge: { position: "absolute", top: 7, right: 7, fontSize: 8, fontWeight: "700", backgroundColor: "rgba(245,158,11,0.15)", color: "#f59e0b", padding: "1px 5px", borderRadius: 5, border: "1px solid rgba(245,158,11,0.25)" },
+  cartQtyBadge: { position: "absolute", top: 7, left: 7, fontSize: 8, fontWeight: "700", backgroundColor: "rgba(37,99,235,0.2)", color: "#60a5fa", padding: "1px 5px", borderRadius: 5, border: "1px solid rgba(37,99,235,0.3)" },
+  productName: { fontWeight: "700", fontSize: 13, color: "#f1f5f9", marginTop: 2 },
+  category: { fontSize: 10, color: "#334155" },
+  price: { fontSize: 15, color: "#60a5fa", fontWeight: "800", margin: "3px 0" },
+  stock: { fontSize: 10, fontWeight: "600" },
+  qtyRow: { display: "flex", gap: 3, marginTop: 4 },
+  qtyQuickBtn: { flex: 1, padding: "3px 0", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 5, color: "#475569", fontSize: 10, fontWeight: "700", cursor: "pointer" },
+  addBtn: { marginTop: 5, padding: "7px 0", color: "#fff", border: "none", borderRadius: 7, fontSize: 12, fontWeight: "700", transition: "all 0.2s" },
 };
