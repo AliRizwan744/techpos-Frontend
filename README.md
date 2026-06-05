@@ -1,16 +1,85 @@
-# React + Vite
+# 🛒 Tech POS — Point of Sale System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full-stack Point of Sale system built with the MERN stack. Designed for retail businesses to manage sales, customers, and inventory efficiently.
 
-Currently, two official plugins are available:
+![Tech Stack](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)
+![Express](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)
+![JWT](https://img.shields.io/badge/JWT-black?style=for-the-badge&logo=JSON%20web%20tokens)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## ✨ Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- 🔐 **JWT Authentication** — Secure login system for admin/cashier roles
+- 🛍️ **Cart Management** — Add, remove, and update items with real-time total calculation
+- 👥 **Customer Database** — Save and manage customer records
+- 📦 **Inventory Tracking** — Low-stock highlighting and product management
+- 🧾 **WhatsApp Receipts** — Send receipts directly to customers via WhatsApp
+- 📱 **QR Code Support** — Generate QR codes for products
+- 🔍 **Voice Search** — Search products using voice input
+- 🌙 **Dark / Light Theme** — Toggle between themes
+- 📂 **Collapsible Sidebar** — Clean, responsive UI layout
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React, Tailwind CSS |
+| Backend | Node.js, Express.js |
+| Database | MongoDB, Mongoose |
+| Auth | JWT (JSON Web Tokens) |
+| Real-time | REST API |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js v18+
+- MongoDB (local or Atlas)
+
+### Installation
+
+git clone https://github.com/AliRizwan744/techpos-Frontend.git
+
+cd backend
+npm install
+
+cd ../frontend
+npm install
+
+### Environment Variables
+
+Create a `.env` file in the backend folder:
+
+PORT=5000
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+
+### Run the App
+
+cd backend
+npm run dev
+
+cd frontend
+npm run dev
+
+App will be running at http://localhost:5173
+
+---
+
+## 🙋‍♂️ Author
+
+**Ali Rizwan**
+- GitHub: [@AliRizwan744](https://github.com/AliRizwan744)
+- LinkedIn: [Ali Rizwan](https://linkedin.com/in/ali-rizwan)
+
+---
+
+## 📄 License
+
+This project is open source and available under the MIT License.
